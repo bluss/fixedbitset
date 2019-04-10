@@ -1,12 +1,12 @@
 //! `FixedBitSet` is a simple fixed size set of bits.
-#![doc(html_root_url="https://docs.rs/fixedbitset/0.1/")]
+#![doc(html_root_url = "https://docs.rs/fixedbitset/0.1/")]
 
 mod range;
 
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index};
+pub use range::IndexRange;
 use std::cmp::{Ord, Ordering};
 use std::iter::{Chain, FromIterator};
-pub use range::IndexRange;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index};
 
 static TRUE: bool = true;
 static FALSE: bool = false;
@@ -15,8 +15,7 @@ const BITS: usize = 32;
 type Block = u32;
 
 #[inline]
-fn div_rem(x: usize, d: usize) -> (usize, usize)
-{
+fn div_rem(x: usize, d: usize) -> (usize, usize) {
     (x / d, x % d)
 }
 
@@ -32,12 +31,10 @@ pub struct FixedBitSet {
     length: usize,
 }
 
-impl FixedBitSet
-{
+impl FixedBitSet {
     /// Create a new **FixedBitSet** with a specific number of bits,
     /// all initially clear.
-    pub fn with_capacity(bits: usize) -> Self
-    {
+    pub fn with_capacity(bits: usize) -> Self {
         let (mut blocks, rem) = div_rem(bits, BITS);
         blocks += (rem > 0) as usize;
         FixedBitSet {
@@ -45,7 +42,7 @@ impl FixedBitSet
             length: bits,
         }
     }
-    
+
     /// Grow capacity to **bits**, all new bits initialized to zero
     pub fn grow(&mut self, bits: usize) {
         let (mut blocks, rem) = div_rem(bits, BITS);
@@ -58,7 +55,9 @@ impl FixedBitSet
 
     /// Return the length of the `FixedBitSet` in bits.
     #[inline]
-    pub fn len(&self) -> usize { self.length }
+    pub fn len(&self) -> usize {
+        self.length
+    }
 
     /// Return **true** if the bit is enabled in the **FixedBitSet**,
     /// **false** otherwise.
@@ -67,8 +66,7 @@ impl FixedBitSet
     ///
     /// Note: Also available with index syntax: `bitset[bit]`.
     #[inline]
-    pub fn contains(&self, bit: usize) -> bool
-    {
+    pub fn contains(&self, bit: usize) -> bool {
         let (block, i) = div_rem(bit, BITS);
         match self.data.get(block) {
             None => false,
@@ -78,8 +76,7 @@ impl FixedBitSet
 
     /// Clear all bits.
     #[inline]
-    pub fn clear(&mut self)
-    {
+    pub fn clear(&mut self) {
         for elt in &mut self.data[..] {
             *elt = 0
         }
@@ -89,8 +86,7 @@ impl FixedBitSet
     ///
     /// **Panics** if **bit** is out of bounds.
     #[inline]
-    pub fn insert(&mut self, bit: usize)
-    {
+    pub fn insert(&mut self, bit: usize) {
         assert!(bit < self.length);
         let (block, i) = div_rem(bit, BITS);
         unsafe {
@@ -102,8 +98,7 @@ impl FixedBitSet
     ///
     /// **Panics** if **bit** is out of bounds.
     #[inline]
-    pub fn put(&mut self, bit: usize) -> bool
-    {
+    pub fn put(&mut self, bit: usize) -> bool {
         assert!(bit < self.length);
         let (block, i) = div_rem(bit, BITS);
         unsafe {
@@ -116,8 +111,7 @@ impl FixedBitSet
 
     /// **Panics** if **bit** is out of bounds.
     #[inline]
-    pub fn set(&mut self, bit: usize, enabled: bool)
-    {
+    pub fn set(&mut self, bit: usize, enabled: bool) {
         assert!(bit < self.length);
         let (block, i) = div_rem(bit, BITS);
         unsafe {
@@ -134,8 +128,7 @@ impl FixedBitSet
     ///
     /// **Panics** if **to** is out of bounds.
     #[inline]
-    pub fn copy_bit(&mut self, from: usize, to: usize)
-    {
+    pub fn copy_bit(&mut self, from: usize, to: usize) {
         assert!(to < self.length);
         let (to_block, t) = div_rem(to, BITS);
         let enabled = self.contains(from);
@@ -155,8 +148,7 @@ impl FixedBitSet
     ///
     /// **Panics** if the range extends past the end of the bitset.
     #[inline]
-    pub fn count_ones<T: IndexRange>(&self, range: T) -> usize
-    {
+    pub fn count_ones<T: IndexRange>(&self, range: T) -> usize {
         Masks::new(range, self.length)
             .map(|(block, mask)| unsafe {
                 let value = *self.data.get_unchecked(block);
@@ -171,8 +163,7 @@ impl FixedBitSet
     ///
     /// **Panics** if the range extends past the end of the bitset.
     #[inline]
-    pub fn set_range<T: IndexRange>(&mut self, range: T, enabled: bool)
-    {
+    pub fn set_range<T: IndexRange>(&mut self, range: T, enabled: bool) {
         for (block, mask) in Masks::new(range, self.length) {
             unsafe {
                 if enabled {
@@ -190,23 +181,20 @@ impl FixedBitSet
     ///
     /// **Panics** if the range extends past the end of the bitset.
     #[inline]
-    pub fn insert_range<T: IndexRange>(&mut self, range: T)
-    {
+    pub fn insert_range<T: IndexRange>(&mut self, range: T) {
         self.set_range(range, true);
     }
 
     /// View the bitset as a slice of `u32` blocks
     #[inline]
-    pub fn as_slice(&self) -> &[u32]
-    {
+    pub fn as_slice(&self) -> &[u32] {
         &self.data
     }
 
     /// View the bitset as a mutable slice of `u32` blocks. Writing past the bitlength in the last
     /// will cause `contains` to return potentially incorrect results for bits past the bitlength.
     #[inline]
-    pub fn as_mut_slice(&mut self) -> &mut [u32]
-    {
+    pub fn as_mut_slice(&mut self) -> &mut [u32] {
         &mut self.data
     }
 
@@ -216,28 +204,77 @@ impl FixedBitSet
     #[inline]
     pub fn ones(&self) -> Ones {
         match self.as_slice().split_first() {
-            Some((&block, rem)) => {
-                Ones {
-                    current_bit_idx: 0,
-                    current_block_idx: 0,
-                    current_block: block,
-                    remaining_blocks: rem
-                }
-            }
-            None => {
-                Ones {
-                    current_bit_idx: 0,
-                    current_block_idx: 0,
-                    current_block: 0,
-                    remaining_blocks: &[]
-                }
-            }
+            Some((&block, rem)) => Ones {
+                current_bit_idx: 0,
+                current_block_idx: 0,
+                current_block: block,
+                remaining_blocks: rem,
+            },
+            None => Ones {
+                current_bit_idx: 0,
+                current_block_idx: 0,
+                current_block: 0,
+                remaining_blocks: &[],
+            },
+        }
+    }
+
+    // Calculates the bit mask for the last block, to mask out "unused" bits.
+    fn mask_for_last_block(&self) -> Block {
+        let (_, bits_in_last_block) = div_rem(self.length, BITS);
+        if bits_in_last_block == 0 {
+            // no "unused" bits in last block.
+            !0
+        } else {
+            // last block only uses `bits_in_last_block` bits out of BITS.
+            // e.g. if `bits_in_last_block` == 4 => 0b1111
+            (1 << bits_in_last_block) - 1
+        }
+    }
+
+    /// Iterates over all unset bits.
+    ///
+    /// Iterator element is the index of the `0` bit, type `usize`.
+    #[inline]
+    pub fn zeros(&self) -> Zeros {
+        // The last block might contain "unused" bits. As these are always "0"
+        // bits, we do not have to care about them when iterating over "1" bits via ones().
+        // But when iterating over the zero bits via zeros(), we have to take these
+        // "unused" bits into account. In general, when iterating over the zero bits
+        // via zeros(), we negate every block, so every "0" bit becomes a "1" bit.
+        // We then look for "1" bits, similar to the ones() iterator. For the last block
+        // we have to apply a mask to mask out the "unused" bits in the negated block:
+        //
+        // block: 0000|100001111 => negate => 1111|011110000
+        //        ^     ^^^^                        ^^^^
+        //        +------ "unused" bits.   &  0000|111111111 (last block mask)
+        //                                 =  0000|011110000
+        //                                          ^^^^
+        let mask_for_last_block = self.mask_for_last_block();
+        match self.as_slice().split_first() {
+            Some((&block, rem)) => Zeros {
+                current_bit_idx: 0,
+                current_block_idx: 0,
+                current_block: if rem.len() == 0 {
+                    !block & mask_for_last_block
+                } else {
+                    !block
+                },
+                remaining_blocks: rem,
+                mask_for_last_block,
+            },
+            None => Zeros {
+                current_bit_idx: 0,
+                current_block_idx: 0,
+                current_block: 0,
+                remaining_blocks: &[],
+                mask_for_last_block,
+            },
         }
     }
 
     /// Returns a lazy iterator over the intersection of two `FixedBitSet`s
-    pub fn intersection<'a>(&'a self, other: &'a FixedBitSet) -> Intersection<'a>
-    {
+    pub fn intersection<'a>(&'a self, other: &'a FixedBitSet) -> Intersection<'a> {
         Intersection {
             iter: self.ones(),
             other: other,
@@ -245,8 +282,7 @@ impl FixedBitSet
     }
 
     /// Returns a lazy iterator over the union of two `FixedBitSet`s.
-    pub fn union<'a>(&'a self, other: &'a FixedBitSet) -> Union<'a>
-    {
+    pub fn union<'a>(&'a self, other: &'a FixedBitSet) -> Union<'a> {
         Union {
             iter: self.ones().chain(other.difference(self)),
         }
@@ -254,8 +290,7 @@ impl FixedBitSet
 
     /// Returns a lazy iterator over the difference of two `FixedBitSet`s. The difference of `a`
     /// and `b` is the elements of `a` which are not in `b`.
-    pub fn difference<'a>(&'a self, other: &'a FixedBitSet) -> Difference<'a>
-    {
+    pub fn difference<'a>(&'a self, other: &'a FixedBitSet) -> Difference<'a> {
         Difference {
             iter: self.ones(),
             other: other,
@@ -264,16 +299,14 @@ impl FixedBitSet
 
     /// Returns a lazy iterator over the symmetric difference of two `FixedBitSet`s.
     /// The symmetric difference of `a` and `b` is the elements of one, but not both, sets.
-    pub fn symmetric_difference<'a>(&'a self, other: &'a FixedBitSet) -> SymmetricDifference<'a>
-    {
+    pub fn symmetric_difference<'a>(&'a self, other: &'a FixedBitSet) -> SymmetricDifference<'a> {
         SymmetricDifference {
             iter: self.difference(other).chain(other.difference(self)),
         }
     }
 
     /// In-place union of two `FixedBitSet`s.
-    pub fn union_with(&mut self, other: &FixedBitSet)
-    {
+    pub fn union_with(&mut self, other: &FixedBitSet) {
         if other.len() >= self.len() {
             self.grow(other.len());
         }
@@ -283,20 +316,18 @@ impl FixedBitSet
     }
 
     /// In-place intersection of two `FixedBitSet`s.
-    pub fn intersect_with(&mut self, other: &FixedBitSet)
-    {
+    pub fn intersect_with(&mut self, other: &FixedBitSet) {
         for (x, y) in self.data.iter_mut().zip(other.data.iter()) {
             *x &= *y;
         }
         let mn = std::cmp::min(self.data.len(), other.data.len());
         for wd in &mut self.data[mn..] {
-           *wd = 0;
+            *wd = 0;
         }
     }
 
     /// In-place symmetric difference of two `FixedBitSet`s.
-    pub fn symmetric_difference_with(&mut self, other: &FixedBitSet)
-    {
+    pub fn symmetric_difference_with(&mut self, other: &FixedBitSet) {
         if other.len() >= self.len() {
             self.grow(other.len());
         }
@@ -308,14 +339,20 @@ impl FixedBitSet
     /// Returns `true` if `self` has no elements in common with `other`. This
     /// is equivalent to checking for an empty intersection.
     pub fn is_disjoint(&self, other: &FixedBitSet) -> bool {
-        self.data.iter().zip(other.data.iter()).all(|(x, y)| x & y == 0)
+        self.data
+            .iter()
+            .zip(other.data.iter())
+            .all(|(x, y)| x & y == 0)
     }
 
     /// Returns `true` if the set is a subset of another, i.e. `other` contains
     /// at least all the values in `self`.
     pub fn is_subset(&self, other: &FixedBitSet) -> bool {
-        self.data.iter().zip(other.data.iter()).all(|(x, y)| x & !y == 0) &&
-        self.data.iter().skip(other.data.len()).all(|x| *x == 0)
+        self.data
+            .iter()
+            .zip(other.data.iter())
+            .all(|(x, y)| x & !y == 0)
+            && self.data.iter().skip(other.data.len()).all(|x| *x == 0)
     }
 
     /// Returns `true` if the set is a superset of another, i.e. `self` contains
@@ -363,7 +400,6 @@ impl<'a> Iterator for SymmetricDifference<'a> {
     }
 }
 
-
 /// An iterator producing elements in the intersection of two sets.
 ///
 /// This struct is created by the [`FixedBitSet::intersection`] method.
@@ -401,7 +437,6 @@ impl<'a> Iterator for Union<'a> {
         self.iter.next()
     }
 }
-
 
 struct Masks {
     first_block: usize,
@@ -456,15 +491,14 @@ impl Iterator for Masks {
     }
 }
 
-
-/// An  iterator producing the indices of the set bit in a set.
+/// An iterator producing the indices of the set bit in a set.
 ///
 /// This struct is created by the [`FixedBitSet::ones`] method.
 pub struct Ones<'a> {
     current_bit_idx: usize,
     current_block_idx: usize,
     remaining_blocks: &'a [Block],
-    current_block: Block
+    current_block: Block,
 }
 
 impl<'a> Iterator for Ones<'a> {
@@ -507,11 +541,63 @@ impl<'a> Iterator for Ones<'a> {
     }
 }
 
-impl Clone for FixedBitSet
-{
+/// An iterator producing the indices of the unset bits in a set.
+///
+/// This struct is created by the [`FixedBitSet::zeros`] method.
+pub struct Zeros<'a> {
+    current_bit_idx: usize,
+    current_block_idx: usize,
+    remaining_blocks: &'a [Block],
+    current_block: Block,
+    mask_for_last_block: Block,
+}
+
+impl<'a> Iterator for Zeros<'a> {
+    type Item = usize; // the bit position of the '0'
+
     #[inline]
-    fn clone(&self) -> Self
-    {
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut block = self.current_block;
+        let mut idx = self.current_bit_idx;
+
+        loop {
+            loop {
+                if (block & 1) == 1 {
+                    self.current_block = block >> 1;
+                    self.current_bit_idx = idx + 1;
+                    return Some(idx);
+                }
+                // reordering the two lines below makes a huge (2x) difference in performance!
+                block = block >> 1;
+                idx += 1;
+                if block == 0 {
+                    break;
+                }
+            }
+
+            // go to next block
+            match self.remaining_blocks.split_first() {
+                Some((&next_block, rest)) => {
+                    self.remaining_blocks = rest;
+                    self.current_block_idx += 1;
+                    idx = self.current_block_idx * BITS;
+                    block = !next_block;
+                    if rest.len() == 0 {
+                        block &= self.mask_for_last_block
+                    }
+                }
+                None => {
+                    // last block => done
+                    return None;
+                }
+            }
+        }
+    }
+}
+
+impl Clone for FixedBitSet {
+    #[inline]
+    fn clone(&self) -> Self {
         FixedBitSet {
             data: self.data.clone(),
             length: self.length,
@@ -524,13 +610,11 @@ impl Clone for FixedBitSet
 ///
 /// Note: bits outside the capacity are always disabled, and thus
 /// indexing a FixedBitSet will not panic.
-impl Index<usize> for FixedBitSet
-{
+impl Index<usize> for FixedBitSet {
     type Output = bool;
 
     #[inline]
-    fn index(&self, bit: usize) -> &bool
-    {
+    fn index(&self, bit: usize) -> &bool {
         if self.contains(bit) {
             &TRUE
         } else {
@@ -540,9 +624,8 @@ impl Index<usize> for FixedBitSet
 }
 
 /// Sets the bit at index **i** to **true** for each item **i** in the input **src**.
-impl Extend<usize> for FixedBitSet
-{
-    fn extend<I: IntoIterator<Item=usize>>(&mut self, src: I) {
+impl Extend<usize> for FixedBitSet {
+    fn extend<I: IntoIterator<Item = usize>>(&mut self, src: I) {
         let iter = src.into_iter();
         for i in iter {
             if i >= self.len() {
@@ -555,17 +638,15 @@ impl Extend<usize> for FixedBitSet
 
 /// Return a FixedBitSet containing bits set to **true** for every bit index in
 /// the iterator, other bits are set to **false**.
-impl FromIterator<usize> for FixedBitSet
-{
-    fn from_iter<I: IntoIterator<Item=usize>>(src: I) -> Self {
+impl FromIterator<usize> for FixedBitSet {
+    fn from_iter<I: IntoIterator<Item = usize>>(src: I) -> Self {
         let mut fbs = FixedBitSet::with_capacity(0);
         fbs.extend(src);
         fbs
     }
 }
 
-impl <'a> BitAnd for &'a FixedBitSet
-{
+impl<'a> BitAnd for &'a FixedBitSet {
     type Output = FixedBitSet;
     fn bitand(self, other: &FixedBitSet) -> FixedBitSet {
         let (short, long) = {
@@ -580,20 +661,20 @@ impl <'a> BitAnd for &'a FixedBitSet
             *data &= *block;
         }
         let len = std::cmp::min(self.len(), other.len());
-        FixedBitSet{data: data, length: len}
+        FixedBitSet {
+            data: data,
+            length: len,
+        }
     }
 }
 
-
-impl <'a> BitAndAssign for FixedBitSet
-{
+impl<'a> BitAndAssign for FixedBitSet {
     fn bitand_assign(&mut self, other: Self) {
         self.intersect_with(&other);
     }
 }
 
-impl <'a> BitOr for &'a FixedBitSet
-{
+impl<'a> BitOr for &'a FixedBitSet {
     type Output = FixedBitSet;
     fn bitor(self, other: &FixedBitSet) -> FixedBitSet {
         let (short, long) = {
@@ -608,19 +689,20 @@ impl <'a> BitOr for &'a FixedBitSet
             *data |= *block;
         }
         let len = std::cmp::max(self.len(), other.len());
-        FixedBitSet{data: data, length: len}
+        FixedBitSet {
+            data: data,
+            length: len,
+        }
     }
 }
 
-impl <'a> BitOrAssign for FixedBitSet
-{
+impl<'a> BitOrAssign for FixedBitSet {
     fn bitor_assign(&mut self, other: Self) {
         self.union_with(&other);
     }
 }
 
-impl <'a> BitXor for &'a FixedBitSet
-{
+impl<'a> BitXor for &'a FixedBitSet {
     type Output = FixedBitSet;
     fn bitxor(self, other: &FixedBitSet) -> FixedBitSet {
         let (short, long) = {
@@ -635,12 +717,14 @@ impl <'a> BitXor for &'a FixedBitSet
             *data ^= *block;
         }
         let len = std::cmp::max(self.len(), other.len());
-        FixedBitSet{data: data, length: len}
+        FixedBitSet {
+            data: data,
+            length: len,
+        }
     }
 }
 
-impl <'a> BitXorAssign for FixedBitSet
-{
+impl<'a> BitXorAssign for FixedBitSet {
     fn bitxor_assign(&mut self, other: Self) {
         self.symmetric_difference_with(&other);
     }
@@ -660,12 +744,12 @@ fn it_works() {
     fb.set(11, false);
     fb.set(12, false);
     fb.set(12, true);
-    fb.set(N-1, true);
+    fb.set(N - 1, true);
     println!("{:?}", fb);
     assert!(fb.contains(10));
     assert!(!fb.contains(11));
     assert!(fb.contains(12));
-    assert!(fb.contains(N-1));
+    assert!(fb.contains(N - 1));
     for i in 0..N {
         let contain = i == 10 || i == 12 || i == N - 1;
         assert_eq!(contain, fb[i]);
@@ -759,6 +843,71 @@ fn ones() {
 }
 
 #[test]
+fn ones_empty() {
+    let fb = FixedBitSet::with_capacity(0);
+    let ones: Vec<_> = fb.ones().collect();
+    assert_eq!(vec![] as Vec<usize>, ones);
+}
+
+#[test]
+fn zeros() {
+    let mut fb = FixedBitSet::with_capacity(100);
+    fb.insert_range(..);
+    fb.set(11, false);
+    fb.set(12, false);
+    fb.set(7, false);
+    fb.set(35, false);
+    fb.set(40, false);
+    fb.set(77, false);
+    fb.set(95, false);
+    fb.set(50, false);
+    fb.set(99, false);
+
+    let zeros: Vec<_> = fb.zeros().collect();
+
+    assert_eq!(vec![7, 11, 12, 35, 40, 50, 77, 95, 99], zeros);
+}
+
+#[test]
+fn zeros_empty() {
+    let fb = FixedBitSet::with_capacity(0);
+    let zeros: Vec<usize> = fb.zeros().collect();
+    assert_eq!(vec![] as Vec<usize>, zeros);
+}
+
+#[test]
+fn zeros_one_bit_unset() {
+    let fb = FixedBitSet::with_capacity(1);
+    let zeros: Vec<_> = fb.zeros().collect();
+    assert_eq!(vec![0], zeros);
+}
+
+#[test]
+fn zeros_one_bit_set() {
+    let mut fb = FixedBitSet::with_capacity(1);
+    fb.insert(0);
+    let zeros: Vec<_> = fb.zeros().collect();
+    assert_eq!(vec![] as Vec<usize>, zeros);
+}
+
+#[test]
+fn zeros_one_block() {
+    let mut fb = FixedBitSet::with_capacity(BITS);
+    fb.insert_range(..);
+    let zeros: Vec<_> = fb.zeros().collect();
+    assert_eq!(vec![] as Vec<usize>, zeros);
+}
+
+#[test]
+fn zeros_one_block_one_bit_unset() {
+    let mut fb = FixedBitSet::with_capacity(BITS);
+    fb.insert_range(..);
+    fb.set(31, false);
+    let zeros: Vec<_> = fb.zeros().collect();
+    assert_eq!(vec![31], zeros);
+}
+
+#[test]
 fn iter_ones_range() {
     fn test_range(from: usize, to: usize, capa: usize) {
         assert!(to <= capa);
@@ -772,8 +921,8 @@ fn iter_ones_range() {
     }
 
     for i in 0..100 {
-      test_range(i, 100, 100);
-      test_range(0, i, 100);
+        test_range(i, 100, 100);
+        test_range(0, i, 100);
     }
 }
 
@@ -803,7 +952,6 @@ fn count_ones_panic() {
     }
 }
 
-
 #[test]
 fn default() {
     let fb = FixedBitSet::default();
@@ -818,7 +966,10 @@ fn insert_range() {
     fb.insert_range(37..81);
     fb.insert_range(90..);
     for i in 0..97 {
-        assert_eq!(fb.contains(i), i<3 || 9<=i&&i<32 || 37<=i&&i<81 || 90<=i);
+        assert_eq!(
+            fb.contains(i),
+            i < 3 || 9 <= i && i < 32 || 37 <= i && i < 81 || 90 <= i
+        );
     }
     assert!(!fb.contains(97));
     assert!(!fb.contains(127));
@@ -836,7 +987,7 @@ fn set_range() {
     fb.set_range(40..40, true);
 
     for i in 0..48 {
-        assert_eq!(fb.contains(i), 5<=i&&i<9 || 32<=i&&i<37);
+        assert_eq!(fb.contains(i), 5 <= i && i < 9 || 32 <= i && i < 37);
     }
     assert!(!fb.contains(48));
     assert!(!fb.contains(64));
@@ -1326,7 +1477,14 @@ fn from_iterator_ones() {
     fb.put(len - 1);
     let dup = fb.ones().collect::<FixedBitSet>();
     println!("{0:?}\n{1:?}", fb, dup);
-    println!("{0:?}\n{1:?}", fb.ones().collect::<Vec<usize>>(), dup.ones().collect::<Vec<usize>>());
+    println!(
+        "{0:?}\n{1:?}",
+        fb.ones().collect::<Vec<usize>>(),
+        dup.ones().collect::<Vec<usize>>()
+    );
     assert_eq!(fb.len(), dup.len());
-    assert_eq!(fb.ones().collect::<Vec<usize>>(), dup.ones().collect::<Vec<usize>>());
+    assert_eq!(
+        fb.ones().collect::<Vec<usize>>(),
+        dup.ones().collect::<Vec<usize>>()
+    );
 }
